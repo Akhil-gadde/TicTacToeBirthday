@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Let's play a game 🎮</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0c0c14;
+      color: #fff;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    /* ── Page-exit overlay ── */
+    #page-exit {
+      position: fixed; inset: 0;
+      background: #0c0c14;
+      opacity: 0; pointer-events: none;
+      transition: opacity .55s ease;
+      z-index: 999;
+    }
+    #page-exit.fade { opacity: 1; pointer-events: all; }
+
+    /* ── Intro screen ── */
+    #intro-screen {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+
+    #intro-glow {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(140,100,220,.1) 0%, transparent 55%);
+      z-index: 19;
+      animation: introGlowPulse 3.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes introGlowPulse {
+      0%,100% { opacity: .4; transform: scale(1); }
+      50%     { opacity: .9; transform: scale(1.1); }
+    }
+
+    .intro-lines { text-align: center; line-height: 1.25; }
+
+    #intro-l1 {
+      font-size: clamp(1.4rem, 4.5vw, 2.4rem);
+      font-weight: 400;
+      color: rgba(255,255,255,.5);
+      display: block;
+      letter-spacing: .5px;
+      opacity: 0; transform: translateY(20px);
+    }
+    #intro-l1.show {
+      transition: opacity .9s ease, transform .9s cubic-bezier(0.2,0.8,0.3,1);
+      opacity: 1; transform: translateY(0);
+    }
+
+    #intro-l2 {
+      font-size: clamp(2.2rem, 7vw, 4.2rem);
+      font-weight: 700;
+      display: block;
+      color: #fff;
+      margin-top: 4px;
+      opacity: 0; transform: translateY(20px);
+      letter-spacing: -.3px;
+    }
+    #intro-l2.show {
+      transition: opacity .9s ease .45s, transform .9s cubic-bezier(0.2,0.8,0.3,1) .45s;
+      opacity: 1; transform: translateY(0);
+    }
+
+    .intro-hint {
+      font-size: .68rem; font-weight: 500;
+      color: rgba(255,255,255,.15);
+      letter-spacing: 4px; text-transform: uppercase;
+      margin-top: 52px;
+      opacity: 0; transition: opacity .7s ease;
+    }
+
+    /* ── Game container ── */
+    .container {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 16px;
+      opacity: 0; transform: translateY(20px);
+      pointer-events: none;
+    }
+
+    h1 {
+      font-size: clamp(1.4rem, 4.5vw, 2.2rem);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.4px;
+      opacity: .9;
+    }
+
+    /* ── Comeback screen ── */
+    #comeback-screen {
+      position: fixed; inset: 0; z-index: 30;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 32px;
+      cursor: default;
+      background: #0c0c14;
+    }
+
+    .comeback-inner { max-width: 520px; }
+
+    .comeback-emoji {
+      font-size: clamp(3rem, 10vw, 5rem);
+      display: block;
+      margin-bottom: 28px;
+      animation: gentleBounce 2s ease-in-out infinite alternate;
+    }
+    @keyframes gentleBounce {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-12px); }
+    }
+
+    .comeback-l1 {
+      font-size: clamp(1.3rem, 4vw, 2rem);
+      font-weight: 600;
+      color: rgba(255,255,255,.9);
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity .9s ease, transform .9s cubic-bezier(0.2,0.8,0.3,1);
+      line-height: 1.4;
+    }
+    .comeback-l2 {
+      font-size: clamp(1rem, 3vw, 1.45rem);
+      font-weight: 400;
+      color: rgba(255,255,255,.5);
+      margin-top: 14px;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity .9s ease .3s, transform .9s cubic-bezier(0.2,0.8,0.3,1) .3s;
+      line-height: 1.5;
+      letter-spacing: .2px;
+    }
+    .comeback-l1.show, .comeback-l2.show {
+      opacity: 1; transform: translateY(0);
+    }
+
+    /* ── Player cards ── */
+    .players-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .player-card {
+      display: flex; flex-direction: column;
+      align-items: center;
+      padding: 10px 18px; min-width: 86px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      transition: border-color .3s, background .3s;
+    }
+
+    #card-you   { color: #93c5fd; }
+    #card-akhil { color: #fca5a5; }
+
+    #card-you.active {
+      background: rgba(147,197,253,.07);
+      border-color: rgba(147,197,253,.35);
+    }
+    #card-akhil.active {
+      background: rgba(252,165,165,.07);
+      border-color: rgba(252,165,165,.35);
+    }
+
+    .p-icon {
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+    }
+    .p-label {
+      font-size: .65rem; font-weight: 600;
+      color: rgba(255,255,255,.3);
+      text-transform: uppercase;
+      letter-spacing: 2.5px; margin-top: 5px;
+    }
+
+    .vs-badge {
+      font-size: .8rem; font-weight: 600;
+      color: rgba(255,255,255,.15);
+      letter-spacing: 4px;
+    }
+
+    /* ── Status bar ── */
+    #status {
+      font-size: clamp(.82rem, 2.6vw, 1rem);
+      font-weight: 500;
+      color: rgba(255,255,255,.6);
+      min-height: 1.8em; text-align: center;
+      padding: 7px 24px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 30px;
+      transition: opacity .15s ease;
+      letter-spacing: .2px;
+    }
+
+    /* ── Board ── */
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(6px, 1.6vw, 10px);
+      padding: clamp(10px, 2.2vw, 16px);
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 20px;
+      box-shadow: 0 4px 40px rgba(0,0,0,.5);
+    }
+
+    .cell {
+      width:  clamp(82px, 22vw, 112px);
+      height: clamp(82px, 22vw, 112px);
+      background: rgba(255,255,255,.035);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 14px;
+      font-size: clamp(2rem, 6.5vw, 2.8rem);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .18s, border-color .18s, transform .12s;
+      user-select: none;
+    }
+
+    .cell.reveal {
+      animation: cellReveal .45s cubic-bezier(0.34,1.56,0.64,1) backwards;
+    }
+    @keyframes cellReveal {
+      from { transform: scale(.5); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+
+    .cell:hover:not([data-taken]) {
+      background: rgba(255,255,255,.07);
+      border-color: rgba(255,255,255,.18);
+      transform: scale(1.04);
+    }
+
+    .cell[data-player="X"] {
+      color: #93c5fd;
+      animation: popIn .3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .cell[data-player="O"] {
+      color: #fca5a5;
+      animation: popIn .3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    .cell.winning {
+      background: rgba(167,139,250,.15) !important;
+      border-color: rgba(167,139,250,.45) !important;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(.35); opacity: .3; }
+      to   { transform: scale(1);   opacity: 1;  }
+    }
+
+    /* ── Reward button ── */
+    #win-btn-wrap {
+      opacity: 0; transform: translateY(18px); pointer-events: none;
+      transition: opacity .7s ease, transform .7s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #win-btn-wrap.visible {
+      opacity: 1; transform: translateY(0); pointer-events: auto;
+    }
+
+    #win-btn {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 6px;
+      padding: 16px 44px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 20px; cursor: pointer;
+      animation: gentlePulse 2.2s ease-in-out infinite;
+      transition: background .2s, border-color .2s;
+    }
+    #win-btn:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.25);
+    }
+
+    .btn-icon  { font-size: clamp(2.2rem, 7vw, 2.8rem); line-height: 1; }
+    .btn-label {
+      font-size: clamp(.62rem, 1.8vw, .76rem);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; color: rgba(255,255,255,.5);
+      letter-spacing: 3px; text-transform: uppercase;
+    }
+
+    @keyframes gentlePulse {
+      0%,100% { transform: scale(1);    border-color: rgba(255,255,255,.15); }
+      50%     { transform: scale(1.04); border-color: rgba(255,255,255,.28); }
+    }
+
+    /* ── Reset button ── */
+    #reset-btn {
+      padding: 7px 24px; font-size: .8rem;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 500;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 20px; color: rgba(255,255,255,.35);
+      cursor: pointer; transition: all .2s, opacity .4s;
+      opacity: 0; pointer-events: none; letter-spacing: .5px;
+    }
+    #reset-btn.visible { opacity: 1; pointer-events: auto; }
+    #reset-btn:hover { border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.7); }
+  </style>
+</head>
+<body>
+
+  <!-- Comeback screen (shown when returning from birthday page) -->
+  <div id="comeback-screen">
+    <div class="comeback-inner">
+      <span class="comeback-emoji">🎂</span>
+      <p class="comeback-l1">I know you'll come back 😄</p>
+      <p class="comeback-l2">Don't bother — just enjoy your birthday!</p>
+    </div>
+  </div>
+
+  <div id="intro-glow"></div>
+
+  <div id="intro-screen">
+    <div class="intro-lines">
+      <span id="intro-l1">Let's play a game,</span>
+      <span id="intro-l2">Shall we?</span>
+    </div>
+    <p class="intro-hint">tap anywhere to continue</p>
+  </div>
+
+  <div id="page-exit"></div>
+
+  <div class="container" id="game-container">
+    <h1>Can you beat Akhil?</h1>
+
+    <div class="players-row">
+      <div class="player-card" id="card-you">
+        <div class="p-icon">✖</div>
+        <div class="p-label">You</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="player-card" id="card-akhil">
+        <div class="p-icon">⭕</div>
+        <div class="p-label">Akhil</div>
+      </div>
+    </div>
+
+    <div id="status">Your turn!</div>
+
+    <div id="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+
+    <div id="win-btn-wrap">
+      <button id="win-btn" onclick="goToBirthday()">
+        <span class="btn-icon">🎁</span>
+        <span class="btn-label">Your reward awaits</span>
+      </button>
+    </div>
+    <button id="reset-btn" onclick="resetGame()">Try Again</button>
+  </div>
+
+  <script>
+    /* ── Comeback screen ── */
+    const isReturn = !!sessionStorage.getItem('visitedBirthday');
+    sessionStorage.removeItem('visitedBirthday'); // clear immediately so reload shows normal game
+
+    if (isReturn) {
+      document.getElementById('intro-screen').style.display = 'none';
+      document.getElementById('intro-glow').style.display   = 'none';
+      const screen = document.getElementById('comeback-screen');
+      screen.style.display = 'flex';
+      setTimeout(() => {
+        screen.querySelector('.comeback-l1').classList.add('show');
+        screen.querySelector('.comeback-l2').classList.add('show');
+      }, 400);
+    }
+
+    /* ── Twinkling stars ── */
+    (function () {
+      const canvas = document.createElement('canvas');
+      canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
+      document.body.insertBefore(canvas, document.body.firstChild);
+      const ctx = canvas.getContext('2d');
+      function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+      resize(); window.addEventListener('resize', resize);
+      const stars = Array.from({ length: 90 }, () => ({
+        x: Math.random(), y: Math.random(),
+        r: Math.random() * 1.1 + 0.2,
+        phase: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.012 + 0.003,
+      }));
+      (function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        stars.forEach(s => {
+          s.phase += s.speed;
+          const a = Math.max(0.03, 0.1 + Math.sin(s.phase) * 0.35);
+          ctx.beginPath();
+          ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+          ctx.fill();
+        });
+        requestAnimationFrame(draw);
+      })();
+    })();
+
+    /* ── Intro ── */
+    const introScreen   = document.getElementById('intro-screen');
+    const introGlow     = document.getElementById('intro-glow');
+    const gameContainer = document.getElementById('game-container');
+    const introHint     = document.querySelector('.intro-hint');
+
+    if (!isReturn) {
+      setTimeout(() => {
+        document.getElementById('intro-l1').classList.add('show');
+        document.getElementById('intro-l2').classList.add('show');
+      }, 300);
+      setTimeout(() => { introHint.style.opacity = '1'; }, 2100);
+    }
+
+    function startGame() {
+      introScreen.removeEventListener('click', startGame);
+      const l1 = document.getElementById('intro-l1');
+      const l2 = document.getElementById('intro-l2');
+
+      l1.style.transition = 'opacity .3s ease, transform .35s ease';
+      l1.style.opacity = '0'; l1.style.transform = 'translateY(-38px)';
+      setTimeout(() => {
+        l2.style.transition = 'opacity .3s ease, transform .35s ease';
+        l2.style.opacity = '0'; l2.style.transform = 'translateY(-38px)';
+        introHint.style.transition = 'opacity .2s ease'; introHint.style.opacity = '0';
+        introGlow.style.transition = 'opacity .3s ease'; introGlow.style.opacity = '0';
+      }, 80);
+
+      setTimeout(() => {
+        introScreen.style.transition = 'opacity .4s ease';
+        introScreen.style.opacity = '0'; introScreen.style.pointerEvents = 'none';
+
+        gameContainer.style.transition = 'opacity .55s ease, transform .55s cubic-bezier(0.2,0.8,0.3,1)';
+        gameContainer.style.opacity = '1';
+        gameContainer.style.transform = 'translateY(0)';
+        gameContainer.style.pointerEvents = 'auto';
+
+        cells.forEach((c, i) => {
+          c.style.animationDelay = `${i * 0.045}s`;
+          c.classList.add('reveal');
+        });
+      }, 360);
+
+      setTimeout(() => {
+        introScreen.style.display = 'none';
+        introGlow.style.display   = 'none';
+      }, 820);
+    }
+    introScreen.addEventListener('click', startGame);
+
+    /* ── Game logic ── */
+    const board     = Array(9).fill(null);
+    const cells     = [...document.querySelectorAll('.cell')];
+    const statusEl  = document.getElementById('status');
+    const winWrap   = document.getElementById('win-btn-wrap');
+    const resetBtn  = document.getElementById('reset-btn');
+    const cardYou   = document.getElementById('card-you');
+    const cardAkhil = document.getElementById('card-akhil');
+
+    let gameOver = false, playerTurn = true, dotsTimer = null, akhilIdx = 0;
+
+    const AKHIL_LINES = [
+      'Akhil is thinking',
+      'Akhil is reconsidering his life choices',
+      'Akhil is strategising... badly',
+      'Akhil is very confused right now',
+      'Akhil is pretending to think',
+      'Akhil is checking his notes',
+    ];
+
+    const WIN_LINES = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function setActive(player) {
+      cardYou.classList.toggle('active', player === 'X');
+      cardAkhil.classList.toggle('active', player === 'O');
+    }
+
+    function checkWin(b, p) {
+      return WIN_LINES.find(ln => ln.every(i => b[i] === p)) ?? null;
+    }
+
+    function winningSquares(b, p) {
+      return [...Array(9).keys()].filter(i => {
+        if (b[i] !== null) return false;
+        const t = [...b]; t[i] = p; return checkWin(t, p);
+      });
+    }
+
+    function cpuPick() {
+      const open    = [...Array(9).keys()].filter(i => board[i] === null);
+      const cpuWins = new Set(winningSquares(board, 'O'));
+      const usrWins = new Set(winningSquares(board, 'X'));
+      const best    = open.filter(i => !cpuWins.has(i) && !usrWins.has(i));
+      if (best.length)    return best[Math.floor(Math.random() * best.length)];
+      const noBlock = open.filter(i => !usrWins.has(i));
+      if (noBlock.length) return noBlock[Math.floor(Math.random() * noBlock.length)];
+      return open[Math.floor(Math.random() * open.length)];
+    }
+
+    function setStatus(msg, thinking = false) {
+      clearInterval(dotsTimer); dotsTimer = null;
+      statusEl.style.opacity = '0';
+      setTimeout(() => {
+        if (thinking) {
+          let d = 0; statusEl.textContent = msg;
+          dotsTimer = setInterval(() => {
+            d = (d + 1) % 4;
+            statusEl.textContent = msg + '.'.repeat(d);
+          }, 280);
+        } else { statusEl.textContent = msg; }
+        statusEl.style.opacity = '1';
+      }, 150);
+    }
+
+    function place(i, player) {
+      board[i] = player;
+      cells[i].textContent    = player === 'X' ? '✖' : '⭕';
+      cells[i].dataset.player = player;
+      cells[i].dataset.taken  = 'true';
+    }
+
+    setActive('X'); setStatus('Your turn!');
+
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => {
+        const i = parseInt(cell.dataset.index);
+        if (!playerTurn || gameOver || board[i] !== null) return;
+
+        place(i, 'X');
+        const win = checkWin(board, 'X');
+        if (win) {
+          gameOver = true; clearInterval(dotsTimer);
+          win.forEach(j => cells[j].classList.add('winning'));
+          setActive(null); setStatus('🎉 You beat Akhil!');
+          setTimeout(() => winWrap.classList.add('visible'), 900);
+          return;
+        }
+        if (board.every(v => v !== null)) {
+          setActive(null); setStatus("It's a draw — try again!");
+          resetBtn.classList.add('visible'); return;
+        }
+
+        playerTurn = false; setActive('O');
+        setStatus(AKHIL_LINES[akhilIdx++ % AKHIL_LINES.length], true);
+
+        setTimeout(() => {
+          const mv = cpuPick();
+          if (mv >= 0) place(mv, 'O');
+          if (board.every(v => v !== null)) {
+            setActive(null); setStatus("It's a draw — try again!");
+            resetBtn.classList.add('visible'); return;
+          }
+          playerTurn = true; setActive('X'); setStatus('Your turn!');
+        }, 700 + Math.random() * 500);
+      });
+    });
+
+    function resetGame() {
+      board.fill(null); gameOver = false; playerTurn = true;
+      clearInterval(dotsTimer);
+      cells.forEach(c => {
+        c.textContent = '';
+        delete c.dataset.player; delete c.dataset.taken;
+        c.classList.remove('winning');
+      });
+      winWrap.classList.remove('visible'); resetBtn.classList.remove('visible');
+      setActive('X'); setStatus('Your turn!');
+    }
+
+    function goToBirthday() {
+      sessionStorage.setItem('visitedBirthday', 'true');
+      document.getElementById('page-exit').classList.add('fade');
+      setTimeout(() => { location.href = 'birthday.html'; }, 580);
+    }
+  </script>
+</body>
+</html>
