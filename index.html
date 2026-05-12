@@ -385,12 +385,17 @@
 
   <script>
     /* ── Comeback screen ── */
-    const isReturn = !!sessionStorage.getItem('visitedBirthday');
-    sessionStorage.removeItem('visitedBirthday'); // clear immediately so reload shows normal game
+    function showComeback() {
+      // Strip the black exit overlay left over from bfcache freeze
+      const exit = document.getElementById('page-exit');
+      exit.style.transition = 'none';
+      exit.classList.remove('fade');
+      exit.offsetHeight; // force reflow
+      exit.style.transition = '';
 
-    if (isReturn) {
       document.getElementById('intro-screen').style.display = 'none';
       document.getElementById('intro-glow').style.display   = 'none';
+
       const screen = document.getElementById('comeback-screen');
       screen.style.display = 'flex';
       setTimeout(() => {
@@ -398,6 +403,20 @@
         screen.querySelector('.comeback-l2').classList.add('show');
       }, 400);
     }
+
+    // Case 1: normal page load (no bfcache) — JS re-runs from top
+    const isReturn = !!sessionStorage.getItem('visitedBirthday');
+    sessionStorage.removeItem('visitedBirthday'); // clear so reload shows normal game
+    if (isReturn) showComeback();
+
+    // Case 2: bfcache restore (most browsers on back button) — JS doesn't re-run,
+    // but pageshow fires. Page is frozen with black overlay still on screen.
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted && sessionStorage.getItem('visitedBirthday')) {
+        sessionStorage.removeItem('visitedBirthday');
+        showComeback();
+      }
+    });
 
     /* ── Twinkling stars ── */
     (function () {
